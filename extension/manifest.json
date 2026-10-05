@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Hirewing",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Hirewing auto-applies on LinkedIn Easy Apply, Indeed and company career sites using your tailored resumes. Runs in your own browser; talks only to your local Hirewing server.",
   "permissions": [
     "storage",
