@@ -65,7 +65,7 @@ with st.sidebar:
     elif st.button("🎉  I landed a job"):
         db.set_setting("landed", "1")
         st.rerun()
-    st.html(f'<div class="sb-foot">Mode: <b>{cfg["apply"]["mode"]}</b> · daily run {cfg["apply"]["run_time"]}<br>Run <code>python -m jobpilot schedule</code> to automate.</div>')
+    st.html(f'<div class="sb-foot">Mode: <b>{cfg["apply"]["mode"]}</b> · runs on demand<br>Optional: <code>python -m jobpilot schedule</code> auto-runs daily at {cfg["apply"]["run_time"]}.</div>')
 
 REFRESH = st.sidebar.toggle("Live refresh (10s)", value=True, help="Re-reads the database so activity from the extension shows up.")
 RUN_EVERY = "10s" if REFRESH else None
@@ -515,7 +515,7 @@ with tab_set:
         p4, p5, p6 = st.columns(3)
         cfg["profile"]["location"] = p4.text_input("Location", cfg["profile"].get("location", ""))
         cfg["profile"]["linkedin"] = p5.text_input("LinkedIn URL", cfg["profile"].get("linkedin", ""))
-        cfg["profile"]["years_experience"] = p6.number_input("Years of experience", 0.0, 40.0, float(cfg["profile"].get("years_experience", 5)))
+        cfg["profile"]["years_experience"] = float(p6.number_input("Years of experience", min_value=0, max_value=40, value=int(round(float(cfg["profile"].get("years_experience", 5) or 0))), step=1))
 
         st.subheader("What to look for")
         csv = lambda k, d: [x.strip() for x in st.session_state.get(k, d).split(",") if x.strip()]  # noqa: E731
@@ -539,11 +539,13 @@ with tab_set:
         so["adzuna"] = st.checkbox("Adzuna (needs API keys in .env)", so["adzuna"])
 
         st.subheader("Daily run")
+        st.caption("The browser extension and the **Run pipeline now** button work any time you press them. The settings below only affect the optional background scheduler.")
         ap = cfg["apply"]
         ap["daily_limit"] = st.number_input("Jobs per day", 1, 100, int(ap["daily_limit"]))
         ap["mode"] = st.radio("Mode", ["prepare", "auto"], index=["prepare", "auto"].index(ap["mode"]), horizontal=True,
                               help="prepare: tailor + queue for your approval. auto: also try to submit Greenhouse/Lever forms (never bypasses captchas).")
-        ap["run_time"] = st.text_input("Run time (HH:MM)", ap["run_time"])
+        ap["run_time"] = st.text_input("Auto-run time (HH:MM) - only used by `python -m jobpilot schedule`", ap["run_time"],
+                                       help="Optional. If you never run the scheduler, this does nothing. Applying through the extension is always on demand.")
         if st.form_submit_button("Save settings", type="primary"):
             to_list = lambda t: [x.strip() for x in t.split(",") if x.strip()]  # noqa: E731
             s["keywords"], s["title_include"], s["title_exclude"], s["locations"] = map(to_list, (kw, ti, te, lo))
