@@ -1,0 +1,10 @@
+data/
+!data/resume.md
+.env
+node_modules/
+__pycache__/
+.pytest_cache/
+.venv/
+*.db
+api_token.txt
+*.zip

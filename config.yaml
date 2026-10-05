@@ -1,0 +1,69 @@
+profile:
+  full_name: ""
+  first_name: ""
+  last_name: ""
+  email: ""
+  phone: ""
+  location: ""          # "City, ST"
+  city: ""
+  state: ""
+  zip: ""
+  country: "United States"
+  linkedin: ""
+  github: ""
+  website: ""
+  current_company: ""
+  current_title: ""
+  years_experience: 5
+  notice_period: "2 weeks"
+
+# Browser extension (LinkedIn Easy Apply, Indeed, career sites). See extension/README.md.
+extension:
+  daily_cap: {linkedin: 25, indeed: 25, career-site: 25}
+  min_probability: 0.30       # skip jobs whose estimated match is below this
+  pace_seconds: [4, 9]        # random pause between jobs (rate limiting)
+  auto_submit: true           # false = fill everything but stop before the final Submit button
+  accept_consent_checkboxes: true   # tick privacy / "I certify" boxes; arbitration, background-check, marketing boxes are never ticked
+
+resume:
+  base_path: data/resume.md        # .md / .txt / .docx / .pdf
+  max_bullets_per_role: 7
+
+search:
+  keywords: ["data engineer", "analytics engineer", "machine learning engineer"]
+  title_include: ["data", "analytics", "machine learning", "ml", "ai", "etl"]
+  title_exclude: ["intern", "director", "vp ", "head of", "principal", "staff"]
+  locations: ["remote", "united states"]   # substring match, case-insensitive
+  remote_ok: true
+  min_score: 55                            # 0-100 match threshold to be eligible
+
+sources:
+  # LinkedIn / Indeed / Glassdoor / Handshake: create saved searches + email alerts on each site.
+  # JobPilot reads those emails (IMAP_USER / IMAP_PASSWORD in .env). No scraping, no site logins.
+  email_alerts: {enabled: false, days_back: 3}
+  # Company career sites hosted on Workday: {company, host, tenant, site}  (see sources/workday.py)
+  workday: []
+  # Optional public ATS boards (many career pages live here). Slugs from boards.greenhouse.io/<slug>, jobs.lever.co/<slug>
+  greenhouse: []
+  lever: []
+  remotive: false
+  adzuna: false
+  adzuna_country: us
+
+apply:
+  daily_limit: 10     # max jobs prepared/applied per day
+  mode: prepare       # prepare = tailor + queue for your one-click approval
+                      # auto    = also try to submit on Greenhouse/Lever forms
+  run_time: "09:00"
+  timezone: America/Chicago
+  headless: true
+
+# Answers for common application questions: regex on the field label -> answer
+answers:
+  "(?i)authorized to work": "Yes"
+  "(?i)sponsorship": "No"
+  "(?i)linkedin": ""
+
+llm:
+  enabled: true
+  model: claude-sonnet-5-5

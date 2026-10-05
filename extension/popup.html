@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>JobPilot</title>
+<style>
+  body { width: 360px; margin: 0; font: 13px/1.45 system-ui, sans-serif; color: #1c1e21; }
+  header { padding: 12px 14px; background: #1b3a8a; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+  header b { font-size: 15px; } #conn { font-size: 11px; opacity: .9; }
+  section { padding: 10px 14px; border-bottom: 1px solid #e4e6eb; }
+  h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #65676b; }
+  .row { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
+  .row .grow { flex: 1; }
+  button { border: 0; border-radius: 6px; padding: 6px 10px; font: inherit; cursor: pointer; background: #1b3a8a; color: #fff; }
+  button.secondary { background: #e4e6eb; color: #1c1e21; } button.stop { background: #c0392b; }
+  #log { max-height: 190px; overflow: auto; margin: 0; padding: 0; list-style: none; }
+  #log li { padding: 4px 0; border-bottom: 1px solid #f0f2f5; font-size: 12px; }
+  .applied { color: #1f8a4c; } .needs_review { color: #b7791f; } .failed { color: #c0392b; } .skipped { color: #65676b; } .info { color: #1b3a8a; }
+  #msg { padding: 6px 14px; font-size: 12px; color: #b7791f; min-height: 16px; }
+  a { color: #1b3a8a; }
+</style></head>
+<body>
+<header><b>JobPilot</b><span id="conn">connecting...</span></header>
+<div id="msg"></div>
+<section>
+  <h3>LinkedIn Easy Apply</h3>
+  <div class="row"><span class="grow">Today: <b id="c-linkedin">0</b></span><button id="start-linkedin">Start</button><button id="stop-linkedin" class="stop">Stop</button></div>
+  <div style="color:#65676b">Open a LinkedIn Jobs search with the <b>Easy Apply</b> filter, then press Start.</div>
+</section>
+<section>
+  <h3>Indeed</h3>
+  <div class="row"><span class="grow">Today: <b id="c-indeed">0</b></span><button id="start-indeed">Start</button><button id="stop-indeed" class="stop">Stop</button></div>
+  <div style="color:#65676b">Open an Indeed search results page, then press Start.</div>
+</section>
+<section>
+  <h3>Career sites</h3>
+  <label class="row"><input type="checkbox" id="auto-careers"> <span class="grow">Auto-fill when an application form appears</span></label>
+  <div class="row"><button id="fill-submit">Fill + submit this page</button><button id="fill-only" class="secondary">Fill only</button></div>
+  <div style="color:#65676b">Today: <b id="c-career-site">0</b> &middot; works on Greenhouse, Lever, Ashby, Workday, iCIMS, SmartRecruiters and any page via the buttons.</div>
+</section>
+<section><h3>Activity</h3><ul id="log"></ul></section>
+<section><a href="#" id="opts">Settings</a> &middot; Dashboard: <code>python -m jobpilot dashboard</code></section>
+<script src="popup.js"></script>
+</body></html>
