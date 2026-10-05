@@ -11,8 +11,8 @@ BRAND_DIR = Path(__file__).resolve().parent.parent / "assets" / "brand"
 BRANDS = {"landed": ("Landed", "apply until you're hired"), "hirewing": ("Hirewing", "your job search, airborne"),
           "careerlift": ("Careerlift", "climb faster"), "applyloop": ("Applyloop", "apply. tailor. repeat."),
           "jobnest": ("Jobnest", "where your applications live"), "offerly": ("Offerly", "from application to offer")}
-BRAND_SLUG = os.environ.get("JOBBOARD_BRAND", "landed")  # change this one value to rename the whole dashboard
-NAME, TAGLINE = BRANDS.get(BRAND_SLUG, BRANDS["landed"])
+BRAND_SLUG = os.environ.get("JOBBOARD_BRAND", "hirewing")  # change this one value to rename the whole dashboard
+NAME, TAGLINE = BRANDS.get(BRAND_SLUG, BRANDS["hirewing"])
 BG, PANEL, PANEL2, BORDER = "#f6f7f3", "#ffffff", "#f1f4ef", "#dfe5de"
 TEXT, MUTED, UP, DOWN, ACCENT, AMBER = "#1f2d27", "#66756e", "#1f9d74", "#d64545", "#24a47f", "#e8a317"
 DARK_GREEN = "#12372c"

@@ -29,7 +29,7 @@ from jobpilot.answers import normalize
 from jobpilot.engine import report_markdown, tailor as engine_tailor
 from jobpilot.resume_io import load_resume
 
-st.set_page_config(page_title=T.NAME, page_icon="🎯", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title=T.NAME, page_icon="🪽", layout="wide", initial_sidebar_state="expanded")
 st.html(T.CSS)
 
 

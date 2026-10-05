@@ -1,4 +1,4 @@
-# JobPilot
+# Hirewing
 
 A local-first job-application autopilot: a Chrome extension that applies on **LinkedIn (Easy Apply), Indeed and company career sites** (Greenhouse, Lever, Ashby, Workday, iCIMS, SmartRecruiters, Workable, BambooHR, ...), filling forms from your profile, plus a **resume tailoring + ATS + match-probability engine** and a Streamlit dashboard. Everything runs on your machine.
 
