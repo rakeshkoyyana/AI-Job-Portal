@@ -24,9 +24,12 @@ STATUS_KIND = {"applied": "up", "interview": "accent", "offer": "up", "ready": "
 CSS = f"""
 <style>
 :root {{ --bg:{BG}; --panel:{PANEL}; --border:{BORDER}; --text:{TEXT}; --muted:{MUTED}; --up:{UP}; --down:{DOWN}; --accent:{ACCENT}; --amber:{AMBER}; }}
-[data-testid="stHeader"], #MainMenu, footer {{ display:none !important; }}
+[data-testid="stToolbarActions"], [data-testid="stMainMenu"], .stAppDeployButton, [data-testid="stDecoration"], [data-testid="stStatusWidget"], #MainMenu, footer {{ display:none !important; }}
+[data-testid="stHeader"] {{ background:transparent !important; height:2.2rem; }}
+[data-testid="stExpandSidebarButton"], [data-testid="stSidebarCollapsedControl"], [data-testid="stSidebarCollapseButton"] {{ color:{DARK_GREEN} !important; }}
+[data-testid="stSidebarCollapsedControl"], [data-testid="stExpandSidebarButton"] {{ background:{PANEL}; border:1px solid {BORDER}; border-radius:8px; box-shadow:0 1px 3px rgba(18,55,44,.1); }}
 .stApp {{ background: linear-gradient(180deg, #eef5f0 0%, {BG} 340px) fixed; }}
-.block-container {{ padding: 0.6rem 1.2rem 2rem 1.2rem !important; max-width: 100% !important; }}
+.block-container {{ padding: 2.6rem 1.2rem 2rem 1.2rem !important; max-width: 100% !important; }}
 [data-testid="stSidebar"] {{ background:{PANEL}; border-right:1px solid {BORDER}; }}
 [data-testid="stSidebar"] > div:first-child {{ padding-top:0; }}
 .sb-brand {{ display:flex; align-items:center; gap:11px; padding:6px 2px 14px; border-bottom:1px solid {BORDER}; margin-bottom:14px; }}
