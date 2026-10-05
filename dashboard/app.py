@@ -8,6 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import datetime as dt
 
+import inspect as _insp
+
 import pandas as pd
 import plotly.graph_objects as go
 import requests
@@ -27,7 +29,7 @@ from jobpilot.answers import normalize
 from jobpilot.engine import report_markdown, tailor as engine_tailor
 from jobpilot.resume_io import load_resume
 
-st.set_page_config(page_title="JobPilot", page_icon="🧭", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title=T.NAME, page_icon="🎯", layout="wide", initial_sidebar_state="expanded")
 st.html(T.CSS)
 
 
@@ -37,30 +39,33 @@ def get_db() -> DB:
 
 
 db, cfg = get_db(), load_config()
+_WB = {"width": "stretch"} if "width" in _insp.signature(st.button).parameters else {"use_container_width": True}
 STATUSES = ["ready", "needs_review", "needs_jd", "applied", "interview", "offer", "skipped", "failed", "scored", "filtered"]
 
 # ------------------------------------------------------------------ sidebar
 with st.sidebar:
-    st.title("🧭 JobPilot")
+    st.html(T.sb_brand())
     landed = db.get_setting("landed") == "1"
-    if landed:
-        st.success("Marked as landed - daily runs are paused.")
-        if st.button("Resume job search"):
-            db.set_setting("landed", "0")
-            st.rerun()
-    else:
-        if st.button("🎉 I landed a job - stop runs"):
-            db.set_setting("landed", "1")
-            st.rerun()
-    st.divider()
-    st.metric("Processed today", f"{db.processed_today()} / {cfg['apply']['daily_limit']}")
-    if st.button("▶ Run pipeline now", type="primary", disabled=landed):
+    st.html(T.sb_today(db.processed_today(), cfg["apply"]["daily_limit"]))
+    _c = db.counts_by_status()
+    _nr = _c.get("needs_review", 0) + sum(1 for r in db.list_applications("needs_review", limit=100000))
+    st.html(T.sb_stats([("Ready to apply", str(_c.get("ready", 0)), "accent"), ("Needs review", str(_nr), "amber" if _nr else ""),
+                        ("Applied", str(_c.get("applied", 0)), "up"), ("Interviews", str(_c.get("interview", 0)), "accent"), ("Offers", str(_c.get("offer", 0)), "up")]))
+    if st.button("▶  Run pipeline now", type="primary", disabled=landed, **_WB):
         with st.spinner("Fetching, scoring, tailoring..."):
             stats = run_daily(cfg, db)
         st.success(f"Fetched {stats['fetched']}, new {stats['new_jobs']}, prepared {stats['prepared']}, applied {stats['applied']}")
         if stats["errors"]:
             st.warning(stats["errors"])
-    st.caption(f"Mode: **{cfg['apply']['mode']}** · runs daily at {cfg['apply']['run_time']} via `jobpilot schedule`")
+    if landed:
+        st.success("Landed! Daily runs are paused.")
+        if st.button("Resume job search"):
+            db.set_setting("landed", "0")
+            st.rerun()
+    elif st.button("🎉  I landed a job"):
+        db.set_setting("landed", "1")
+        st.rerun()
+    st.html(f'<div class="sb-foot">Mode: <b>{cfg["apply"]["mode"]}</b> · daily run {cfg["apply"]["run_time"]}<br>Run <code>python -m jobpilot schedule</code> to automate.</div>')
 
 REFRESH = st.sidebar.toggle("Live refresh (10s)", value=True, help="Re-reads the database so activity from the extension shows up.")
 RUN_EVERY = "10s" if REFRESH else None

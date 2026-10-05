@@ -1,9 +1,18 @@
-"""Visual layer for the JobPilot dashboard: CSS + small HTML builders (strings only, no Streamlit imports)."""
+"""Visual layer for the dashboard: CSS + small HTML builders (strings only, no Streamlit imports)."""
 from __future__ import annotations
 
+import base64
 import html
+import os
+from pathlib import Path
 from datetime import datetime
 
+BRAND_DIR = Path(__file__).resolve().parent.parent / "assets" / "brand"
+BRANDS = {"landed": ("Landed", "apply until you're hired"), "hirewing": ("Hirewing", "your job search, airborne"),
+          "careerlift": ("Careerlift", "climb faster"), "applyloop": ("Applyloop", "apply. tailor. repeat."),
+          "jobnest": ("Jobnest", "where your applications live"), "offerly": ("Offerly", "from application to offer")}
+BRAND_SLUG = os.environ.get("JOBBOARD_BRAND", "landed")  # change this one value to rename the whole dashboard
+NAME, TAGLINE = BRANDS.get(BRAND_SLUG, BRANDS["landed"])
 BG, PANEL, PANEL2, BORDER = "#f6f7f3", "#ffffff", "#f1f4ef", "#dfe5de"
 TEXT, MUTED, UP, DOWN, ACCENT, AMBER = "#1f2d27", "#66756e", "#1f9d74", "#d64545", "#24a47f", "#e8a317"
 DARK_GREEN = "#12372c"
@@ -19,6 +28,15 @@ CSS = f"""
 .stApp {{ background: linear-gradient(180deg, #eef5f0 0%, {BG} 340px) fixed; }}
 .block-container {{ padding: 0.6rem 1.2rem 2rem 1.2rem !important; max-width: 100% !important; }}
 [data-testid="stSidebar"] {{ background:{PANEL}; border-right:1px solid {BORDER}; }}
+[data-testid="stSidebar"] > div:first-child {{ padding-top:0; }}
+.sb-brand {{ display:flex; align-items:center; gap:11px; padding:6px 2px 14px; border-bottom:1px solid {BORDER}; margin-bottom:14px; }}
+.sb-brand .n {{ font-size:21px; font-weight:800; color:{DARK_GREEN}; line-height:1.1; }} .sb-brand .t {{ font-size:11.5px; color:{MUTED}; margin-top:2px; }}
+.sb-card {{ background:{PANEL2}; border:1px solid {BORDER}; border-radius:10px; padding:12px; margin-bottom:12px; }}
+.sb-card .l {{ font-size:10.5px; text-transform:uppercase; letter-spacing:.8px; color:{MUTED}; }}
+.sb-ring {{ display:flex; align-items:center; gap:12px; }} .sb-ring .v {{ font-size:22px; font-weight:800; color:{DARK_GREEN}; }} .sb-ring .s {{ font-size:11.5px; color:{MUTED}; }}
+.sb-row {{ display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid #e8ede7; font-size:13px; }} .sb-row:last-child {{ border-bottom:0; }}
+.sb-row b {{ font-variant-numeric:tabular-nums; }}
+.sb-foot {{ font-size:11.5px; color:{MUTED}; line-height:1.5; margin-top:6px; }}
 .tp-top {{ box-shadow:0 1px 3px rgba(18,55,44,.06); display:flex; align-items:center; gap:12px; padding:10px 14px; background:{PANEL}; border:1px solid {BORDER}; border-radius:10px; margin-bottom:8px; flex-wrap:wrap; }}
 .tp-logo {{ font-weight:800; font-size:18px; letter-spacing:.4px; }} .tp-logo span {{ color:{ACCENT}; }} .tp-logo {{ color:{DARK_GREEN}; }}
 .tp-spacer {{ flex:1; }} .tp-meta {{ color:{MUTED}; font-size:12px; }}
@@ -45,7 +63,7 @@ CSS = f"""
 .kpi .l {{ color:{MUTED}; font-size:11px; text-transform:uppercase; letter-spacing:.7px; }}
 .kpi .v {{ font-size:24px; font-weight:700; margin-top:2px; font-variant-numeric: tabular-nums; }}
 .kpi .s {{ color:{MUTED}; font-size:11px; margin-top:1px; }}
-.kpi svg {{ position:absolute; right:8px; bottom:8px; opacity:.9; }}
+.kpi img {{ position:absolute; right:8px; bottom:8px; opacity:.9; }}
 .bar {{ height:5px; background:{BG}; border-radius:5px; margin-top:7px; overflow:hidden; }} .bar i {{ display:block; height:100%; background:{ACCENT}; border-radius:5px; }}
 .panel {{ background:{PANEL}; border:1px solid {BORDER}; border-radius:10px; padding:10px 12px; margin-bottom:10px; }}
 .panel h4 {{ margin:0 0 8px 0; font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:{MUTED}; font-weight:600; display:flex; justify-content:space-between; align-items:center; }}
@@ -81,6 +99,14 @@ PLOT = dict(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor
 AXIS = dict(gridcolor="#e8ede7", zeroline=False)
 
 
+def mark_img(size: int = 30) -> str:
+    try:
+        b64 = base64.b64encode((BRAND_DIR / f"{BRAND_SLUG}-mark.svg").read_bytes()).decode()
+    except OSError:
+        return ""
+    return f'<img alt="{NAME}" width="{size}" height="{size}" style="display:block" src="data:image/svg+xml;base64,{b64}">'
+
+
 def esc(s) -> str:
     return html.escape("" if s is None else str(s))
 
@@ -96,6 +122,11 @@ def ago(ts, now: datetime | None = None) -> str:
     return f"{int(s)}s ago" if s < 90 else f"{int(s // 60)}m ago" if s < 5400 else f"{int(s // 3600)}h ago" if s < 172800 else f"{int(s // 86400)}d ago"
 
 
+def _img(svg: str, w: int, h: int) -> str:
+    """Inline <svg> gets stripped by Streamlit's HTML sanitiser; a data-URI <img> survives."""
+    return f'<img width="{w}" height="{h}" style="display:block" src="data:image/svg+xml;base64,{base64.b64encode(svg.encode()).decode()}">'
+
+
 def spark_svg(values, color=ACCENT, w=74, h=26) -> str:
     v = [float(x) for x in values if x is not None]
     if len(v) < 2 or max(v) == min(v) == 0:
@@ -103,8 +134,8 @@ def spark_svg(values, color=ACCENT, w=74, h=26) -> str:
     lo, hi = min(v), max(v)
     rng = (hi - lo) or 1.0
     pts = " ".join(f"{i * (w - 2) / (len(v) - 1) + 1:.1f},{h - 2 - (x - lo) / rng * (h - 4):.1f}" for i, x in enumerate(v))
-    return (f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg"><polygon points="1,{h} {pts} {w - 1},{h}" fill="{color}" opacity=".13"/>'
-            f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>')
+    return _img(f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg"><polygon points="1,{h} {pts} {w - 1},{h}" fill="{color}" opacity=".13"/>'
+            f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>', w, h)
 
 
 def pill(text, kind="", live=False) -> str:
@@ -117,7 +148,7 @@ def chip(text, kind="mut") -> str:
 
 
 def topbar(pills: list[str], as_of: str) -> str:
-    return ('<div class="tp-top"><div class="tp-logo">🧭 Job<span>Pilot</span></div>' + "".join(pills) +
+    return ('<div class="tp-top"><div class="tp-logo" style="display:flex;align-items:center;gap:9px">' + mark_img(30) + esc(NAME) + '</div>' + "".join(pills) +
             f'<span class="tp-spacer"></span><span class="tp-meta">Updated {esc(as_of)}</span></div>')
 
 
@@ -168,3 +199,25 @@ def board(cols: dict[str, list[dict]], totals: dict[str, int]) -> str:
             more = '<div class="mut" style="font-size:11px;text-align:center">+' + str(totals[s] - len(cards)) + " more</div>"
         out.append('<div class="col"><h5><span>' + labels[s] + "</span><span>" + str(totals[s]) + "</span></h5>" + body + more + "</div>")
     return '<div class="board">' + "".join(out) + "</div>"
+
+
+def sb_brand() -> str:
+    return f'<div class="sb-brand">{mark_img(40)}<div><div class="n">{esc(NAME)}</div><div class="t">{esc(TAGLINE)}</div></div></div>'
+
+
+def ring_svg(frac: float, size: int = 54, color: str = ACCENT) -> str:
+    r, c = 21, 2 * 3.14159 * 21
+    frac = max(0.0, min(frac, 1.0))
+    return _img(f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 54 54"><circle cx="27" cy="27" r="{r}" fill="none" stroke="{BORDER}" stroke-width="6"/>'
+            f'<circle cx="27" cy="27" r="{r}" fill="none" stroke="{color}" stroke-width="6" stroke-linecap="round" stroke-dasharray="{c * frac:.1f} {c:.1f}" transform="rotate(-90 27 27)"/></svg>', size, size)
+
+
+def sb_today(done: int, limit: int) -> str:
+    frac = done / limit if limit else 0
+    return (f'<div class="sb-card"><div class="l">Today</div><div class="sb-ring">{ring_svg(frac)}<div><div class="v">{done}<span class="mut" style="font-size:14px"> / {limit}</span></div>'
+            f'<div class="s">jobs processed</div></div></div></div>')
+
+
+def sb_stats(rows: list[tuple[str, str, str]]) -> str:
+    body = "".join(f'<div class="sb-row"><span>{esc(lbl)}</span><b class="{cls}">{esc(val)}</b></div>' for lbl, val, cls in rows)
+    return f'<div class="sb-card"><div class="l" style="margin-bottom:4px">Pipeline</div>{body}</div>'
