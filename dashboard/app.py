@@ -6,8 +6,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import datetime as dt
+
 import pandas as pd
+import plotly.graph_objects as go
+import requests
 import streamlit as st
+
+from dashboard import metrics as M
+from dashboard import theme as T
 
 from jobpilot.analyzer import analyze, job_from_row
 from jobpilot.config import ROOT, data_dir, load_config, save_config
@@ -20,7 +27,8 @@ from jobpilot.answers import normalize
 from jobpilot.engine import report_markdown, tailor as engine_tailor
 from jobpilot.resume_io import load_resume
 
-st.set_page_config(page_title="JobPilot", page_icon="🧭", layout="wide")
+st.set_page_config(page_title="JobPilot", page_icon="🧭", layout="wide", initial_sidebar_state="expanded")
+st.html(T.CSS)
 
 
 @st.cache_resource
@@ -54,29 +62,161 @@ with st.sidebar:
             st.warning(stats["errors"])
     st.caption(f"Mode: **{cfg['apply']['mode']}** · runs daily at {cfg['apply']['run_time']} via `jobpilot schedule`")
 
-tab_over, tab_apps, tab_resume, tab_lib, tab_q, tab_jobs, tab_add, tab_set = st.tabs(
-    ["Overview", "Applications", "Tailor & ATS", "Resumes", "Questions", "Job search", "Add jobs", "Settings"])
+REFRESH = st.sidebar.toggle("Live refresh (10s)", value=True, help="Re-reads the database so activity from the extension shows up.")
+RUN_EVERY = "10s" if REFRESH else None
 
-# ------------------------------------------------------------------ overview
+
+def _api_state() -> tuple[str, str]:
+    tok = data_dir() / "api_token.txt"
+    if not tok.exists():
+        return "API not started", "down"
+    try:
+        r = requests.get("http://127.0.0.1:8765/api/health", headers={"X-JobPilot-Token": tok.read_text().strip()}, timeout=0.6)
+        return ("API online · AI on" if r.ok and r.json().get("llm") else "API online · rules mode") if r.ok else "API token mismatch", "up" if r.ok else "amber"
+    except requests.RequestException:
+        return "API offline (run: python -m jobpilot api)", "down"
+
+
+import inspect as _inspect
+
+_W = {"width": "stretch"} if "width" in _inspect.signature(st.plotly_chart).parameters else {"use_container_width": True}
+_WD = {"width": "stretch"} if "width" in _inspect.signature(st.dataframe).parameters else {"use_container_width": True}
+
+
+def _plot(fig, height=300):
+    fig.update_layout(height=height, **T.PLOT)
+    fig.update_xaxes(**T.AXIS)
+    fig.update_yaxes(**T.AXIS)
+    return fig
+
+
+@st.fragment(run_every=RUN_EVERY)
+def header_and_tape():
+    jobs, apps = M.frames(db)
+    label, kind = _api_state()
+    by = db.applied_today_by_platform()
+    caps = cfg.get("extension", {}).get("daily_cap", {})
+    applied_today = sum(by.values())
+    cap_total = sum(v for v in caps.values() if isinstance(v, int))
+    landed_now = db.get_setting("landed") == "1"
+    pills = [T.pill(label, kind, live=kind == "up"),
+             T.pill("Landed - paused" if landed_now else "Searching", "up" if landed_now else "accent", live=not landed_now),
+             T.pill(f"Mode: {cfg['apply']['mode']}", "accent"),
+             T.pill("Auto-submit ON" if cfg.get("extension", {}).get("auto_submit") else "Fill-only (safe)", "amber" if cfg.get("extension", {}).get("auto_submit") else "up"),
+             T.pill(f"Today {applied_today}/{cap_total or '-'}", "accent")]
+    st.html(T.topbar(pills, dt.datetime.now().strftime("%a %b %d  %H:%M:%S")))
+    st.html(T.tape(M.activity(jobs, apps)))
+
+
+header_and_tape()
+
+tab_over, tab_board, tab_apps, tab_resume, tab_lib, tab_q, tab_jobs, tab_add, tab_set = st.tabs(
+    ["Command center", "Pipeline board", "Applications", "Tailor & ATS", "Resumes", "Questions", "Job search", "Add jobs", "Settings"])
+
+# ------------------------------------------------------------------ command center
 with tab_over:
-    counts = db.counts_by_status()
-    cols = st.columns(6)
-    for c, (label, key) in zip(cols, [("Ready to apply", "ready"), ("Needs review", "needs_review"), ("Need JD pasted", "needs_jd"), ("Applied", "applied"),
-                                      ("Interviews", "interview"), ("Offers", "offer")]):
-        c.metric(label, counts.get(key, 0))
-    left, right = st.columns(2)
-    with left:
-        st.subheader("Jobs processed per day")
-        days = db.per_day()
-        if days:
-            st.bar_chart(pd.DataFrame([dict(r) for r in days]).set_index("day"))
-        else:
-            st.info("No runs yet. Add sources in Settings, then press Run pipeline now.")
-    with right:
-        st.subheader("Recent runs")
-        runs = db.recent_runs(10)
-        if runs:
-            st.dataframe(pd.DataFrame([dict(r) for r in runs]).drop(columns=["id"]), hide_index=True, use_container_width=True)
+    @st.fragment(run_every=RUN_EVERY)
+    def command_center():
+        jobs, apps = M.frames(db)
+        ev = M.applied_events(jobs, apps)
+        daily = M.daily_applied(ev, 30)
+        total_series = daily.sum(axis=1).tolist()
+        fun = M.funnel_counts(jobs, apps)
+        st_ = jobs["status"].value_counts().to_dict()
+        by = db.applied_today_by_platform()
+        caps = cfg.get("extension", {}).get("daily_cap", {})
+        cap_total = sum(v for v in caps.values() if isinstance(v, int))
+        today = sum(by.values())
+        review = st_.get("needs_review", 0) + int((apps["status"] == "needs_review").sum())
+        scores = pd.to_numeric(jobs["score"], errors="coerce").dropna()
+        iv_rate = M.rate(fun["interview"], fun["applied"])
+        cards = [
+            T.kpi("Applied (total)", str(fun["applied"]), f"last 7d: {int(sum(total_series[-7:]))}", total_series, T.UP),
+            T.kpi("Today", f"{today}<span class='mut' style='font-size:14px'> / {cap_total or '-'}</span>", "daily cap, all sites", progress=(today / cap_total) if cap_total else None),
+            T.kpi("Ready to apply", str(st_.get("ready", 0)), "tailored, waiting", color=T.ACCENT),
+            T.kpi("Needs review", str(review), "stopped: captcha / question", cls="amber" if review else ""),
+            T.kpi("Need JD pasted", str(st_.get("needs_jd", 0)), "from alert emails"),
+            T.kpi("Interviews", str(fun["interview"]), f"{iv_rate}% of applied" if iv_rate is not None else "-", cls="accent"),
+            T.kpi("Offers", str(fun["offer"]), "", cls="up" if fun["offer"] else ""),
+            T.kpi("Avg match", f"{scores.mean():.0f}" if len(scores) else "-", f"{len(scores)} scored jobs"),
+        ]
+        st.html('<div class="kpis">' + "".join(cards) + "</div>")
+        if not len(jobs) and not len(apps):
+            st.html('<div class="banner warn">Nothing tracked yet. Start the extension on a LinkedIn / Indeed search, add jobs in <b>Add jobs</b>, or press <b>Run pipeline now</b>.</div>')
+        left, right = st.columns([3, 1.2], gap="small")
+        with left:
+            c1, c2 = st.columns(2)
+            with c1:
+                fig = go.Figure(go.Funnel(y=["Found", "Scored", "Ready", "Applied", "Interview", "Offer"], x=[fun[k] for k in M.FUNNEL],
+                                          textinfo="value+percent initial", marker=dict(color=[T.MUTED, "#4a6fe0", T.ACCENT, T.UP, T.AMBER, "#38b26b"])))
+                st.markdown("**Application funnel**")
+                st.plotly_chart(_plot(fig, 320), **_W, key="fun")
+            with c2:
+                st.markdown("**Applications per day (30d)**")
+                fig = go.Figure()
+                for col in daily.columns:
+                    fig.add_bar(x=daily.index, y=daily[col], name=col, marker_color=T.PLATFORM_COLORS.get(col, T.ACCENT))
+                fig.update_layout(barmode="stack")
+                ymax = max(float(daily.sum(axis=1).max()), 3.0)
+                if cap_total and cap_total <= ymax * 2:
+                    fig.add_hline(y=cap_total, line_dash="dot", line_color=T.AMBER, annotation_text="daily cap")
+                fig.update_yaxes(range=[0, max(ymax * 1.3, cap_total if cap_total and cap_total <= ymax * 2 else 0)])
+                st.plotly_chart(_plot(fig, 320), **_W, key="perday")
+            c3, c4, c5 = st.columns(3)
+            with c3:
+                st.markdown("**Match score distribution**")
+                if len(scores):
+                    fig = go.Figure(go.Histogram(x=scores, nbinsx=10, marker_color=T.ACCENT))
+                    st.plotly_chart(_plot(fig, 260), **_W, key="hist")
+                else:
+                    st.caption("No scored jobs yet.")
+            with c4:
+                st.markdown("**Source mix**")
+                src = pd.concat([jobs["source"].dropna(), apps["platform"].dropna()]).value_counts()
+                if len(src):
+                    fig = go.Figure(go.Pie(labels=src.index, values=src.values, hole=.6, marker=dict(colors=[T.PLATFORM_COLORS.get(x, T.ACCENT) for x in src.index])))
+                    st.plotly_chart(_plot(fig, 260), **_W, key="mix")
+                else:
+                    st.caption("No data yet.")
+            with c5:
+                st.markdown("**Top skill gaps** (missing from your resume)")
+                gaps = M.top_gaps(jobs, 8)
+                if gaps:
+                    fig = go.Figure(go.Bar(x=[g[1] for g in gaps][::-1], y=[g[0] for g in gaps][::-1], orientation="h", marker_color=T.AMBER))
+                    st.plotly_chart(_plot(fig, 260), **_W, key="gaps")
+                else:
+                    st.caption("No gaps found yet.")
+        with right:
+            st.html(T.panel("Live activity", T.feed(M.activity(jobs, apps, 14)), "newest first", 430))
+            runs = db.recent_runs(5)
+            body = "".join(f'<div class="feed">{T.esc(str(r["started_at"])[:16])}<div class="t">fetched {r["fetched"]} · new {r["new_jobs"]} · prepared {r["prepared"]} · applied {r["applied"]}</div></div>' for r in runs) or '<div class="empty">No pipeline runs yet.</div>'
+            st.html(T.panel("Pipeline runs", body, "", 220))
+
+    command_center()
+
+# ------------------------------------------------------------------ pipeline board
+with tab_board:
+    @st.fragment(run_every=RUN_EVERY)
+    def pipeline_board():
+        jobs, apps = M.frames(db)
+        cols, totals = M.board(jobs, apps)
+        st.html(T.board(cols, totals))
+        with st.expander("Move a card"):
+            opts = [(c["kind"], c["id"], f"{c['title']} @ {c['company']} ({s})") for s, cs in cols.items() for c in cs]
+            if opts:
+                m1, m2, m3 = st.columns([4, 2, 1])
+                pick = m1.selectbox("Card", opts, format_func=lambda o: o[2], key="mv_card")
+                dest = m2.selectbox("Move to", M.BOARD + ["skipped", "failed"], key="mv_to")
+                if m3.button("Move", type="primary", key="mv_go"):
+                    if pick[0] == "job":
+                        db.update(pick[1], status=dest, **({"applied_at": now()} if dest == "applied" else {}))
+                    else:
+                        db.update_application(pick[1], status=dest)
+                    st.rerun()
+            else:
+                st.caption("No cards yet.")
+
+    pipeline_board()
 
 # ------------------------------------------------------------------ jobs
 with tab_jobs:
@@ -91,7 +231,7 @@ with tab_jobs:
     else:
         df = pd.DataFrame([{"id": r["id"], "score": r["score"], "title": r["title"], "company": r["company"],
                             "location": r["location"], "status": r["status"], "source": r["source"]} for r in rows])
-        st.dataframe(df, hide_index=True, use_container_width=True, height=260)
+        st.dataframe(df, hide_index=True, **_WD, height=260)
         jid = st.selectbox("Open job", [r["id"] for r in rows],
                            format_func=lambda i: next(f"#{r['id']} · {r['title']} @ {r['company']}" for r in rows if r["id"] == i))
         job = db.get(jid)
@@ -237,7 +377,7 @@ with tab_resume:
         k1, k2 = st.columns(2)
         with k1:
             st.markdown("**ATS score breakdown**")
-            st.dataframe(pd.DataFrame([{"Component": k, "Points": p, "Max": m} for k, (p, m) in o.after.breakdown.items()]), hide_index=True, use_container_width=True)
+            st.dataframe(pd.DataFrame([{"Component": k, "Points": p, "Max": m} for k, (p, m) in o.after.breakdown.items()]), hide_index=True, **_WD)
         with k2:
             st.markdown("**Keywords**")
             st.write("Matched required:", ", ".join(o.after.matched_required) or "-")
@@ -272,19 +412,41 @@ with tab_resume:
 
 # ------------------------------------------------------------------ applications (browser extension tracker)
 with tab_apps:
-    st.subheader("Applications logged by the browser extension")
     by = db.applied_today_by_platform()
-    c1, c2, c3 = st.columns(3)
     caps = cfg.get("extension", {}).get("daily_cap", {})
-    for col, plat in zip((c1, c2, c3), ("linkedin", "indeed", "career-site")):
-        col.metric(f"{plat} today", f"{by.get(plat, 0)} / {caps.get(plat, '-')}")
-    rows_ = db.list_applications(limit=2000)
+    gcols = st.columns(3)
+    for col, plat in zip(gcols, ("linkedin", "indeed", "career-site")):
+        n, cap = by.get(plat, 0), caps.get(plat, 0) or 0
+        fig = go.Figure(go.Indicator(mode="gauge+number", value=n, title={"text": plat}, gauge={
+            "axis": {"range": [0, max(cap, 1)]}, "bar": {"color": T.PLATFORM_COLORS.get(plat, T.ACCENT)}, "bgcolor": T.PANEL2, "borderwidth": 0}))
+        fig.update_layout(margin=dict(l=20, r=20, t=50, b=10))
+        col.plotly_chart(_plot(fig, 200).update_layout(margin=dict(l=20, r=20, t=50, b=10)), **_W, key=f"g_{plat}")
+    rows_ = db.list_applications(limit=5000)
     if rows_:
-        adf = pd.DataFrame([dict(r) for r in rows_])[["id", "platform", "title", "company", "status", "match_score", "notes", "url", "updated_at"]]
-        pick_s = st.multiselect("Status", sorted(adf["status"].dropna().unique()), default=[x for x in ("applied", "needs_review") if x in set(adf["status"])])
-        view = adf[adf["status"].isin(pick_s)] if pick_s else adf
-        st.dataframe(view, hide_index=True, use_container_width=True)
-        st.download_button("Export CSV", view.to_csv(index=False), file_name="applications.csv")
+        adf = pd.DataFrame([dict(r) for r in rows_])
+        f1, f2, f3 = st.columns([2, 2, 3])
+        sel_s = f1.multiselect("Status", sorted(adf["status"].dropna().unique()), default=[x for x in ("applied", "needs_review") if x in set(adf["status"])])
+        sel_p = f2.multiselect("Platform", sorted(adf["platform"].dropna().unique()))
+        qtxt = f3.text_input("Search title / company", key="app_q")
+        view = adf
+        if sel_s:
+            view = view[view["status"].isin(sel_s)]
+        if sel_p:
+            view = view[view["platform"].isin(sel_p)]
+        if qtxt:
+            view = view[(view["title"].fillna("") + " " + view["company"].fillna("")).str.lower().str.contains(qtxt.lower())]
+        show = view[["id", "platform", "title", "company", "status", "match_score", "notes", "url", "updated_at"]].copy()
+        show["match_score"] = pd.to_numeric(show["match_score"], errors="coerce").apply(lambda x: x * 100 if pd.notna(x) and x <= 1 else x)
+        st.dataframe(show, hide_index=True, height=380, **_WD, column_config={
+            "match_score": st.column_config.ProgressColumn("match %", min_value=0, max_value=100, format="%.0f"),
+            "url": st.column_config.LinkColumn("link", display_text="open")})
+        d1, d2, d3 = st.columns([1, 2, 1])
+        d1.download_button("Export CSV", show.to_csv(index=False), file_name="applications.csv")
+        aid = d2.selectbox("Update a row", view["id"].tolist(), format_func=lambda i: f"#{i} · {view.loc[view['id'] == i, 'title'].iloc[0]}", key="upd_row")
+        new = d3.selectbox("Status", ["applied", "needs_review", "interview", "offer", "rejected", "skipped"], key="upd_status")
+        if st.button("Save status"):
+            db.update_application(int(aid), status=new)
+            st.rerun()
         st.caption("needs_review = the extension stopped (captcha, a question it won't guess, or an external site). Open the link and finish it yourself.")
     else:
         st.info("Nothing yet. Install the extension (extension/README.md) and press Start on a LinkedIn or Indeed search.")

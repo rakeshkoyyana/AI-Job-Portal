@@ -5,7 +5,7 @@ A local-first job-application autopilot: a Chrome extension that applies on **Li
 ## Architecture
 - `jobpilot/api.py` - FastAPI on `127.0.0.1:8765`, token-protected (`X-JobPilot-Token`, stored in `data/api_token.txt`).
 - `extension/` - Chrome MV3 extension. Content scripts drive the pages; the service worker proxies API calls so the token never reaches web pages.
-- `dashboard/app.py` - Streamlit UI: applications, Tailor & ATS, resume library, question bank, settings.
+- `dashboard/app.py` - interactive Streamlit command center (dark theme, live status bar, activity ticker, KPI cards, funnel / per-day / score / source / skill-gap charts, kanban pipeline board, applications table with gauges, Tailor & ATS, resumes, question bank, settings). Auto-refreshes every 10s while the extension works.
 - `jobpilot/engine.py` - tailoring: rewrites your **original .docx in place** (same format/styles) for a job description.
 - `jobpilot/ats.py` - ATS keyword score, match probability, interview prep, suggestions.
 - `jobpilot/answers.py` - screening-question answers: question bank -> config answers -> sensitive guard -> LLM (validated).
