@@ -148,7 +148,7 @@ with tab_over:
             c1, c2 = st.columns(2)
             with c1:
                 fig = go.Figure(go.Funnel(y=["Found", "Scored", "Ready", "Applied", "Interview", "Offer"], x=[fun[k] for k in M.FUNNEL],
-                                          textinfo="value+percent initial", marker=dict(color=[T.MUTED, "#4a6fe0", T.ACCENT, T.UP, T.AMBER, "#38b26b"])))
+                                          textinfo="value+percent initial", marker=dict(color=["#b8c4bd", "#7fcfb2", T.ACCENT, T.DARK_GREEN, T.AMBER, "#c9743a"])))
                 st.markdown("**Application funnel**")
                 st.plotly_chart(_plot(fig, 320), **_W, key="fun")
             with c2:

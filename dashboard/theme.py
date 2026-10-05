@@ -4,10 +4,11 @@ from __future__ import annotations
 import html
 from datetime import datetime
 
-BG, PANEL, PANEL2, BORDER = "#0e1019", "#1b1e2e", "#222640", "#2a2e45"
-TEXT, MUTED, UP, DOWN, ACCENT, AMBER = "#e6e8f2", "#8a90ab", "#26a69a", "#ef5350", "#6c8cff", "#f5b041"
-PLATFORM_COLORS = {"linkedin": "#4a8cff", "indeed": "#7c5cff", "career-site": "#26a69a", "greenhouse": "#26a69a",
-                   "lever": "#f5b041", "glassdoor": "#38b26b", "handshake": "#e07bb4", "other": "#8a90ab"}
+BG, PANEL, PANEL2, BORDER = "#f6f7f3", "#ffffff", "#f1f4ef", "#dfe5de"
+TEXT, MUTED, UP, DOWN, ACCENT, AMBER = "#1f2d27", "#66756e", "#1f9d74", "#d64545", "#24a47f", "#e8a317"
+DARK_GREEN = "#12372c"
+PLATFORM_COLORS = {"linkedin": "#12372c", "indeed": "#24a47f", "career-site": "#e8a317", "greenhouse": "#7fcfb2",
+                   "lever": "#9aa8a1", "glassdoor": "#5fb88f", "handshake": "#c9743a", "other": "#b8c4bd"}
 STATUS_KIND = {"applied": "up", "interview": "accent", "offer": "up", "ready": "accent", "needs_review": "amber",
                "needs_jd": "amber", "failed": "down", "skipped": "mut"}
 
@@ -15,21 +16,21 @@ CSS = f"""
 <style>
 :root {{ --bg:{BG}; --panel:{PANEL}; --border:{BORDER}; --text:{TEXT}; --muted:{MUTED}; --up:{UP}; --down:{DOWN}; --accent:{ACCENT}; --amber:{AMBER}; }}
 [data-testid="stHeader"], #MainMenu, footer {{ display:none !important; }}
-.stApp {{ background: radial-gradient(1200px 500px at 20% -10%, #1a1f3a 0%, {BG} 55%) fixed; }}
+.stApp {{ background: linear-gradient(180deg, #eef5f0 0%, {BG} 340px) fixed; }}
 .block-container {{ padding: 0.6rem 1.2rem 2rem 1.2rem !important; max-width: 100% !important; }}
 [data-testid="stSidebar"] {{ background:{PANEL}; border-right:1px solid {BORDER}; }}
-.tp-top {{ display:flex; align-items:center; gap:12px; padding:10px 14px; background:{PANEL}; border:1px solid {BORDER}; border-radius:14px; margin-bottom:8px; flex-wrap:wrap; }}
-.tp-logo {{ font-weight:800; font-size:18px; letter-spacing:.4px; }} .tp-logo span {{ color:{ACCENT}; }}
+.tp-top {{ box-shadow:0 1px 3px rgba(18,55,44,.06); display:flex; align-items:center; gap:12px; padding:10px 14px; background:{PANEL}; border:1px solid {BORDER}; border-radius:10px; margin-bottom:8px; flex-wrap:wrap; }}
+.tp-logo {{ font-weight:800; font-size:18px; letter-spacing:.4px; }} .tp-logo span {{ color:{ACCENT}; }} .tp-logo {{ color:{DARK_GREEN}; }}
 .tp-spacer {{ flex:1; }} .tp-meta {{ color:{MUTED}; font-size:12px; }}
 .pill {{ display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:600; border:1px solid {BORDER}; background:{BG}; color:{MUTED}; white-space:nowrap; }}
-.pill.up {{ color:{UP}; border-color:rgba(38,166,154,.45); background:rgba(38,166,154,.10); }}
-.pill.down {{ color:{DOWN}; border-color:rgba(239,83,80,.45); background:rgba(239,83,80,.10); }}
-.pill.amber {{ color:{AMBER}; border-color:rgba(245,176,65,.45); background:rgba(245,176,65,.10); }}
-.pill.accent {{ color:{ACCENT}; border-color:rgba(108,140,255,.45); background:rgba(108,140,255,.10); }}
+.pill.up {{ color:{UP}; border-color:rgba(31,157,116,.45); background:rgba(31,157,116,.10); }}
+.pill.down {{ color:{DOWN}; border-color:rgba(214,69,69,.45); background:rgba(214,69,69,.10); }}
+.pill.amber {{ color:{AMBER}; border-color:rgba(232,163,23,.45); background:rgba(232,163,23,.10); }}
+.pill.accent {{ color:{ACCENT}; border-color:rgba(36,164,127,.45); background:rgba(36,164,127,.10); }}
 .dot {{ width:7px; height:7px; border-radius:50%; background:currentColor; display:inline-block; }}
 .dot.live {{ animation: pulse 1.6s infinite; }}
 @keyframes pulse {{ 0%{{opacity:1}} 50%{{opacity:.25}} 100%{{opacity:1}} }}
-.tape {{ overflow:hidden; background:{PANEL}; border:1px solid {BORDER}; border-radius:12px; margin-bottom:10px; position:relative; }}
+.tape {{ overflow:hidden; background:{PANEL}; border:1px solid {BORDER}; border-radius:8px; margin-bottom:10px; position:relative; }}
 .tape::before, .tape::after {{ content:""; position:absolute; top:0; bottom:0; width:42px; z-index:2; pointer-events:none; }}
 .tape::before {{ left:0; background:linear-gradient(90deg,{PANEL},transparent); }}
 .tape::after {{ right:0; background:linear-gradient(270deg,{PANEL},transparent); }}
@@ -39,41 +40,45 @@ CSS = f"""
 .ti {{ display:inline-flex; align-items:center; gap:7px; padding:0 22px; border-right:1px solid {BORDER}; font-size:12.5px; white-space:nowrap; }}
 .up {{ color:{UP}; }} .down {{ color:{DOWN}; }} .mut {{ color:{MUTED}; }} .amber {{ color:{AMBER}; }} .accent {{ color:{ACCENT}; }}
 .kpis {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:10px; }}
-.kpi {{ background:{PANEL}; border:1px solid {BORDER}; border-radius:14px; padding:11px 13px 9px 13px; position:relative; overflow:hidden; transition:border-color .15s, transform .15s; }}
-.kpi:hover {{ border-color:{ACCENT}; transform:translateY(-1px); }}
+.kpi {{ background:{PANEL}; border:1px solid {BORDER}; border-radius:10px; padding:11px 13px 9px 13px; position:relative; overflow:hidden; transition:border-color .15s, transform .15s; }}
+.kpi:hover {{ border-color:{ACCENT}; box-shadow:0 2px 10px rgba(18,55,44,.08); }}
 .kpi .l {{ color:{MUTED}; font-size:11px; text-transform:uppercase; letter-spacing:.7px; }}
 .kpi .v {{ font-size:24px; font-weight:700; margin-top:2px; font-variant-numeric: tabular-nums; }}
 .kpi .s {{ color:{MUTED}; font-size:11px; margin-top:1px; }}
 .kpi svg {{ position:absolute; right:8px; bottom:8px; opacity:.9; }}
 .bar {{ height:5px; background:{BG}; border-radius:5px; margin-top:7px; overflow:hidden; }} .bar i {{ display:block; height:100%; background:{ACCENT}; border-radius:5px; }}
-.panel {{ background:{PANEL}; border:1px solid {BORDER}; border-radius:14px; padding:10px 12px; margin-bottom:10px; }}
+.panel {{ background:{PANEL}; border:1px solid {BORDER}; border-radius:10px; padding:10px 12px; margin-bottom:10px; }}
 .panel h4 {{ margin:0 0 8px 0; font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:{MUTED}; font-weight:600; display:flex; justify-content:space-between; align-items:center; }}
 .scroll {{ overflow-y:auto; padding-right:4px; }}
 .scroll::-webkit-scrollbar {{ width:6px; }} .scroll::-webkit-scrollbar-thumb {{ background:{BORDER}; border-radius:6px; }}
 .chip {{ padding:1px 7px; border-radius:6px; font-size:10.5px; font-weight:700; display:inline-block; }}
-.chip.up {{ background:rgba(38,166,154,.16); color:{UP}; }} .chip.down {{ background:rgba(239,83,80,.16); color:{DOWN}; }}
-.chip.mut {{ background:rgba(138,144,171,.16); color:{MUTED}; }} .chip.accent {{ background:rgba(108,140,255,.16); color:{ACCENT}; }}
-.chip.amber {{ background:rgba(245,176,65,.16); color:{AMBER}; }}
-.feed {{ padding:8px 2px; border-bottom:1px solid rgba(42,46,69,.7); font-size:12.5px; }} .feed:last-child {{ border-bottom:0; }}
+.chip.up {{ background:rgba(31,157,116,.16); color:{UP}; }} .chip.down {{ background:rgba(214,69,69,.16); color:{DOWN}; }}
+.chip.mut {{ background:rgba(102,117,110,.16); color:{MUTED}; }} .chip.accent {{ background:rgba(36,164,127,.16); color:{ACCENT}; }}
+.chip.amber {{ background:rgba(232,163,23,.16); color:{AMBER}; }}
+.feed {{ padding:8px 2px; border-bottom:1px solid #e8ede7; font-size:12.5px; }} .feed:last-child {{ border-bottom:0; }}
 .feed .t {{ color:{MUTED}; font-size:10.5px; margin-top:2px; }}
 .empty {{ color:{MUTED}; font-size:12.5px; padding:10px 2px; }}
 .board {{ display:grid; grid-template-columns: repeat(5, minmax(190px, 1fr)); gap:10px; }}
-.col {{ background:{PANEL}; border:1px solid {BORDER}; border-radius:14px; padding:8px; min-height:140px; max-height:640px; overflow-y:auto; }}
+.col {{ background:{PANEL}; border:1px solid {BORDER}; border-radius:10px; padding:8px; min-height:140px; max-height:640px; overflow-y:auto; }}
 .col h5 {{ margin:2px 4px 8px; font-size:11.5px; text-transform:uppercase; letter-spacing:.7px; color:{MUTED}; display:flex; justify-content:space-between; }}
 .card {{ background:{PANEL2}; border:1px solid {BORDER}; border-radius:10px; padding:8px 10px; margin-bottom:7px; font-size:12.5px; transition:border-color .15s; }}
 .card:hover {{ border-color:{ACCENT}; }} .card b {{ display:block; line-height:1.3; }} .card .m {{ color:{MUTED}; font-size:11px; margin-top:3px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }}
-.banner {{ border-radius:12px; padding:10px 14px; border:1px solid {BORDER}; margin-bottom:10px; font-size:13px; }}
-.banner.warn {{ border-color:rgba(245,176,65,.5); background:rgba(245,176,65,.08); }}
-.banner.good {{ border-color:rgba(38,166,154,.5); background:rgba(38,166,154,.08); }}
+.banner {{ border-radius:8px; padding:10px 14px; border:1px solid {BORDER}; margin-bottom:10px; font-size:13px; }}
+.banner.warn {{ border-color:rgba(232,163,23,.5); background:rgba(232,163,23,.08); }}
+.banner.good {{ border-color:rgba(31,157,116,.5); background:rgba(31,157,116,.08); }}
 button[data-baseweb="tab"] {{ font-weight:600; }}
-[data-testid="stMetric"] {{ background:{PANEL}; border:1px solid {BORDER}; border-radius:12px; padding:10px 12px; }}
-[data-testid="stDataFrame"] {{ border:1px solid {BORDER}; border-radius:12px; overflow:hidden; }}
+.stButton > button[kind="primary"], .stDownloadButton > button {{ background:{ACCENT}; border-color:{ACCENT}; color:#fff; border-radius:8px; font-weight:600; }}
+.stButton > button[kind="primary"]:hover {{ background:#1d8c6c; border-color:#1d8c6c; }}
+.stButton > button, .stDownloadButton > button {{ border-radius:8px; }}
+h1,h2,h3,h4 {{ color:{DARK_GREEN}; }}
+[data-testid="stMetric"] {{ background:{PANEL}; border:1px solid {BORDER}; border-radius:8px; padding:10px 12px; }}
+[data-testid="stDataFrame"] {{ border:1px solid {BORDER}; border-radius:8px; overflow:hidden; }}
 </style>
 """
 
-PLOT = dict(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color=MUTED, size=11),
+PLOT = dict(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color=MUTED, size=11),
             margin=dict(l=10, r=10, t=30, b=10), legend=dict(orientation="h", y=1.12, x=0))
-AXIS = dict(gridcolor="rgba(42,46,69,.6)", zeroline=False)
+AXIS = dict(gridcolor="#e8ede7", zeroline=False)
 
 
 def esc(s) -> str:
