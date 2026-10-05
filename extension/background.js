@@ -18,7 +18,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const data = await res.json().catch(() => ({}));
         sendResponse({ ok: res.ok, status: res.status, data, error: res.ok ? null : data.detail || data.error || `HTTP ${res.status}` });
       } catch (e) {
-        sendResponse({ ok: false, error: "Can't reach JobPilot. Is `python -m jobpilot api` running?" });
+        sendResponse({ ok: false, error: "Can't reach Hirewing. Is `python -m jobpilot api` running?" });
       }
     })();
     return true; // async response

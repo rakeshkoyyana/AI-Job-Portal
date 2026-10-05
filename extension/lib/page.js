@@ -47,7 +47,7 @@
       (doc.body || doc.documentElement).appendChild(el);
     }
     el.style.background = { info: '#2b5fd9', ok: '#1f8a4c', warn: '#b7791f', err: '#c0392b' }[kind] || '#2b5fd9';
-    el.textContent = 'JobPilot: ' + text;
+    el.textContent = 'Hirewing: ' + text;
   }
 
   // Outline fields the filler could not answer so you can fill them yourself.
